@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<title>蝕花の残影ギミック補助</title>
+<style>
+  body { font-family: sans-serif; padding: 20px; }
+
+  #resetBtn, #undoBtn {
+    padding: 12px 20px;
+    font-size: 1.2em;
+    font-weight: bold;
+    border: 3px solid #cc3300;
+    background: #ff9966;
+    color: #fff;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-right: 10px;
+  }
+
+  /* 推測コード欄は非表示（内部処理用） */
+  #guess {
+    display: none;
+  }
+
+  #result {
+    margin-top: 20px;
+    white-space: pre-wrap;
+  }
+
+  /* 入力セル（4×4固定） */
+  .grid-input {
+    display: inline-block;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    width: 422px;
+    margin-top: 10px;
+  }
+
+  /* 候補セル */
+  .grid-candidate {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 10px;
+  }
+
+  /* 共通セルデザイン */
+  .cell {
+    border: 2px solid #444;
+    padding: 8px 12px;
+    border-radius: 6px;
+    background: #fafafa;
+    min-width: 70px;
+    text-align: center;
+    cursor: pointer;
+    white-space: nowrap;
+    font-size: 1.4em;
+    font-weight: bold;
+  }
+
+  .cell:hover {
+    background: #e6e6e6;
+  }
+
+  /* 現在選択中の推測コード */
+  .cell.selected-guess {
+    background: #ffe5cc;
+    border-color: #ff9933;
+  }
+
+  /* 過去に選んだ推測コード */
+  .cell.history-guess {
+    background: #552255;
+    border-color: #e6b800;
+  }
+
+  /* 正解数セル */
+  .hit-grid {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+  }
+
+  .hit-cell {
+    border: 2px solid #444;
+    padding: 8px 12px;
+    border-radius: 6px;
+    background: #fafafa;
+    min-width: 40px;
+    text-align: center;
+    cursor: pointer;
+    white-space: nowrap;
+    font-size: 1.4em;
+    font-weight: bold;
+  }
+
+  .hit-cell.selected {
+    background: #cce5ff;
+    border-color: #3399ff;
+  }
+</style>
+</head>
+<body>
+
+<!-- リセット & Undo ボタン -->
+<button id="resetBtn">リセット</button>
+<button id="undoBtn">一つ戻る</button>
+
+<!-- 入力セル -->
+<h3>推測コードを選択：</h3>
+<div id="inputGrid" class="grid-input"></div>
+
+<!-- 推測コード（内部処理用） -->
+<input id="guess" maxlength="4" readonly>
+
+<h3>正解数：</h3>
+<div id="hitGrid" class="hit-grid"></div>
+
+<div id="result"></div>
+
+<script>
+// 16通りの全候補
+const initialCandidates = [
+  "1111","1112","1121","1122",
+  "1211","1212","1221","1222",
+  "2111","2112","2121","2122",
+  "2211","2212","2221","2222"
+];
+
+let candidates = [...initialCandidates];
+let guessValue = "";          // 現在の推測コード
+let historyGuesses = [];      // 履歴コード
+let stateHistory = [];        // Undo 用の状態履歴
+
+// 状態保存
+function saveState() {
+  stateHistory.push({
+    candidates: [...candidates],
+    guessValue: guessValue,
+    historyGuesses: [...historyGuesses],
+    selectedHit: document.querySelector(".hit-cell.selected")?.textContent || null
+  });
+}
+
+// Undo（1つ前に戻る）
+function undo() {
+  if (stateHistory.length === 0) return;
+
+  const prev = stateHistory.pop();
+
+  candidates = [...prev.candidates];
+  guessValue = prev.guessValue;
+  historyGuesses = [...prev.historyGuesses];
+
+  document.getElementById("guess").value = guessValue;
+
+  // セルの見た目を復元
+  document.querySelectorAll("#inputGrid .cell").forEach(c => {
+    c.classList.remove("selected-guess", "history-guess");
+    if (c.textContent === guessValue) {
+      c.classList.add("selected-guess");
+    } else if (historyGuesses.includes(c.textContent)) {
+      c.classList.add("history-guess");
+    }
+  });
+
+  // 正解数セルの復元
+  document.querySelectorAll(".hit-cell").forEach(c => c.classList.remove("selected"));
+  if (prev.selectedHit !== null) {
+    document.querySelectorAll(".hit-cell").forEach(c => {
+      if (c.textContent === prev.selectedHit) c.classList.add("selected");
+    });
+  }
+
+  updateResult();
+}
+
+// セルクリック時の処理（推測コード選択）
+function selectCell(value) {
+  saveState();
+
+  guessValue = value;
+  document.getElementById("guess").value = value;
+
+  document.querySelectorAll(".hit-cell").forEach(c => c.classList.remove("selected"));
+
+  document.querySelectorAll("#inputGrid .cell.selected-guess").forEach(c => {
+    c.classList.remove("selected-guess");
+    c.classList.add("history-guess");
+
+    if (!historyGuesses.includes(c.textContent)) {
+      historyGuesses.push(c.textContent);
+    }
+  });
+
+  document.querySelectorAll("#inputGrid .cell").forEach(c => {
+    if (c.textContent === value) {
+      c.classList.add("selected-guess");
+      c.classList.remove("history-guess");
+    }
+  });
+
+  updateResult();
+}
+
+// 入力セル16個
+function createInputGrid() {
+  const grid = document.getElementById("inputGrid");
+  grid.innerHTML = "";
+  initialCandidates.forEach(c => {
+    const div = document.createElement("div");
+    div.className = "cell";
+    div.textContent = c;
+    div.addEventListener("click", () => selectCell(c));
+    grid.appendChild(div);
+  });
+}
+
+// 正解数セルを生成
+function createHitGrid() {
+  const grid = document.getElementById("hitGrid");
+  grid.innerHTML = "";
+
+  for (let i = 0; i <= 4; i++) {
+    const div = document.createElement("div");
+    div.className = "hit-cell";
+    div.textContent = i;
+
+    div.addEventListener("click", () => {
+      saveState();
+      document.querySelectorAll(".hit-cell").forEach(c => c.classList.remove("selected"));
+      div.classList.add("selected");
+      applyHitFilter(i);
+    });
+
+    grid.appendChild(div);
+  }
+}
+
+// 位置一致数を計算
+function countHit(a, b) {
+  let h = 0;
+  for (let i = 0; i < 4; i++) {
+    if (a[i] === b[i]) h++;
+  }
+  return h;
+}
+
+// 正解数フィルタリング
+function applyHitFilter(hit) {
+  if (!/^[12]{4}$/.test(guessValue)) return;
+
+  candidates = [...initialCandidates];
+  candidates = candidates.filter(code => countHit(code, guessValue) === hit);
+
+  updateResult();
+}
+
+// 結果表示（候補セル）
+function updateResult() {
+  candidates = candidates.filter(c => !historyGuesses.includes(c));
+
+  const result = document.getElementById("result");
+
+  if (candidates.length === 1) {
+    const c = candidates[0];
+    result.innerHTML =
+      "<h3>確定：</h3>" +
+      `<div id="candidateGrid" class="grid-candidate"></div>`;
+
+    const cg = document.getElementById("candidateGrid");
+    const div = document.createElement("div");
+    div.className = "cell";
+    div.textContent = c;
+    div.addEventListener("click", () => selectCell(c));
+    cg.appendChild(div);
+    return;
+  }
+
+  result.innerHTML =
+    "<h3>現在の候補 (" + candidates.length + "件):</h3>" +
+    `<div id="candidateGrid" class="grid-candidate"></div>`;
+
+  const cg = document.getElementById("candidateGrid");
+  candidates.forEach(c => {
+    const div = document.createElement("div");
+    div.className = "cell";
+    div.textContent = c;
+    div.addEventListener("click", () => selectCell(c));
+    cg.appendChild(div);
+  });
+}
+
+// リセット
+document.getElementById("resetBtn").onclick = () => {
+  candidates = [...initialCandidates];
+  guessValue = "";
+  historyGuesses = [];
+  stateHistory = [];
+
+  document.getElementById("guess").value = "";
+  document.querySelectorAll(".hit-cell").forEach(c => c.classList.remove("selected"));
+  document.querySelectorAll("#inputGrid .cell").forEach(c => {
+    c.classList.remove("selected-guess");
+    c.classList.remove("history-guess");
+  });
+
+  updateResult();
+};
+
+// Undo ボタン
+document.getElementById("undoBtn").onclick = undo;
+
+// 初期化
+createInputGrid();
+createHitGrid();
+updateResult();
+</script>
+
+<hr noshade size="1">
+<div align="right">
+  蝕花の残影ギミック補助:
+  <a href="https://x.com/Kana_Bananan" target="_blank">ばな奈</a> /
+  <a href="https://github.com/TheDeepBeyond/RaidCB" target="_blank">GitHub</a>
+</div>
+
+
+</body>
+</html>
