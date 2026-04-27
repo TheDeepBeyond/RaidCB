@@ -2,6 +2,7 @@
 <html lang="ja">
 <head>
 <title>蝕花の残影ギミック補助</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   body { font-family: sans-serif; padding: 20px; }
 
@@ -29,7 +30,6 @@
 
   /* 入力セル（4×4固定） */
   .grid-input {
-    display: inline-block;
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
@@ -99,6 +99,29 @@
     background: #cce5ff;
     border-color: #3399ff;
   }
+
+/* スマホ最適化（画面幅 600px 以下） */
+@media (max-width: 600px) {
+
+  .grid-input,
+  .grid-candidate {
+    width: 100% !important;
+    gap: 6px;
+  }
+
+  .cell {
+    min-width: 18vw !important;
+    padding: 4px 0;
+    font-size: 1.0em;
+  }
+
+  .hit-cell {
+    min-width: 14vw !important;
+    padding: 4px 0;
+    font-size: 1.0em;
+  }
+}
+
 </style>
 </head>
 <body>
