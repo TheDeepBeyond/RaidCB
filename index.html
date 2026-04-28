@@ -3,6 +3,7 @@
 <head>
 <title>蝕花の残影ギミック補助</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+
 <style>
   body { font-family: sans-serif; padding: 20px; }
 
@@ -18,17 +19,13 @@
     margin-right: 10px;
   }
 
-  /* 推測コード欄は非表示（内部処理用） */
-  #guess {
-    display: none;
-  }
+  #guess { display: none; }
 
   #result {
     margin-top: 20px;
     white-space: pre-wrap;
   }
 
-  /* 入力セル（4×4固定） */
   .grid-input {
     display: flex;
     flex-wrap: wrap;
@@ -37,7 +34,6 @@
     margin-top: 10px;
   }
 
-  /* 候補セル */
   .grid-candidate {
     display: flex;
     flex-wrap: wrap;
@@ -45,7 +41,6 @@
     margin-top: 10px;
   }
 
-  /* 共通セルデザイン */
   .cell {
     border: 2px solid #444;
     padding: 8px 12px;
@@ -59,23 +54,18 @@
     font-weight: bold;
   }
 
-  .cell:hover {
-    background: #e6e6e6;
-  }
+  .cell:hover { background: #e6e6e6; }
 
-  /* 現在選択中の推測コード */
   .cell.selected-guess {
     background: #ffe5cc;
     border-color: #ff9933;
   }
 
-  /* 過去に選んだ推測コード */
   .cell.history-guess {
     background: #552255;
     border-color: #e6b800;
   }
 
-  /* 正解数セル */
   .hit-grid {
     display: flex;
     gap: 10px;
@@ -100,41 +90,42 @@
     border-color: #3399ff;
   }
 
-/* スマホ最適化（画面幅 600px 以下） */
-@media (max-width: 600px) {
+  /* スマホ最適化 */
+  @media (max-width: 600px) {
 
-  .grid-input,
-  .grid-candidate {
-    width: 100% !important;
-    gap: 6px;
+    .grid-input,
+    .grid-candidate {
+      width: 100% !important;
+      gap: 6px;
+    }
+
+    .cell {
+      min-width: 18vw !important;
+      padding: 4px 0;
+      font-size: 1.0em;
+    }
+
+    .hit-cell {
+      min-width: 14vw !important;
+      padding: 4px 0;
+      font-size: 1.0em;
+    }
+
+    #resetBtn, #undoBtn {
+      padding: 10px 16px;
+      font-size: 1.1em;
+    }
   }
-
-  .cell {
-    min-width: 18vw !important;
-    padding: 4px 0;
-    font-size: 1.0em;
-  }
-
-  .hit-cell {
-    min-width: 14vw !important;
-    padding: 4px 0;
-    font-size: 1.0em;
-  }
-}
-
 </style>
 </head>
 <body>
 
-<!-- リセット & Undo ボタン -->
 <button id="resetBtn">リセット</button>
 <button id="undoBtn">一つ戻る</button>
 
-<!-- 入力セル -->
 <h3>推測コードを選択：</h3>
 <div id="inputGrid" class="grid-input"></div>
 
-<!-- 推測コード（内部処理用） -->
 <input id="guess" maxlength="4" readonly>
 
 <h3>正解数：</h3>
@@ -152,9 +143,10 @@ const initialCandidates = [
 ];
 
 let candidates = [...initialCandidates];
-let guessValue = "";          // 現在の推測コード
-let historyGuesses = [];      // 履歴コード
-let stateHistory = [];        // Undo 用の状態履歴
+let guessValue = "";
+let historyGuesses = [];
+let history = [];
+let stateHistory = [];
 
 // 状態保存
 function saveState() {
@@ -162,11 +154,12 @@ function saveState() {
     candidates: [...candidates],
     guessValue: guessValue,
     historyGuesses: [...historyGuesses],
+    history: JSON.parse(JSON.stringify(history)),
     selectedHit: document.querySelector(".hit-cell.selected")?.textContent || null
   });
 }
 
-// Undo（1つ前に戻る）
+// Undo
 function undo() {
   if (stateHistory.length === 0) return;
 
@@ -175,10 +168,10 @@ function undo() {
   candidates = [...prev.candidates];
   guessValue = prev.guessValue;
   historyGuesses = [...prev.historyGuesses];
+  history = JSON.parse(JSON.stringify(prev.history));
 
   document.getElementById("guess").value = guessValue;
 
-  // セルの見た目を復元
   document.querySelectorAll("#inputGrid .cell").forEach(c => {
     c.classList.remove("selected-guess", "history-guess");
     if (c.textContent === guessValue) {
@@ -188,7 +181,6 @@ function undo() {
     }
   });
 
-  // 正解数セルの復元
   document.querySelectorAll(".hit-cell").forEach(c => c.classList.remove("selected"));
   if (prev.selectedHit !== null) {
     document.querySelectorAll(".hit-cell").forEach(c => {
@@ -199,7 +191,7 @@ function undo() {
   updateResult();
 }
 
-// セルクリック時の処理（推測コード選択）
+// 推測コード選択
 function selectCell(value) {
   saveState();
 
@@ -211,7 +203,6 @@ function selectCell(value) {
   document.querySelectorAll("#inputGrid .cell.selected-guess").forEach(c => {
     c.classList.remove("selected-guess");
     c.classList.add("history-guess");
-
     if (!historyGuesses.includes(c.textContent)) {
       historyGuesses.push(c.textContent);
     }
@@ -227,7 +218,7 @@ function selectCell(value) {
   updateResult();
 }
 
-// 入力セル16個
+// 入力セル生成
 function createInputGrid() {
   const grid = document.getElementById("inputGrid");
   grid.innerHTML = "";
@@ -240,7 +231,7 @@ function createInputGrid() {
   });
 }
 
-// 正解数セルを生成
+// 正解数セル生成
 function createHitGrid() {
   const grid = document.getElementById("hitGrid");
   grid.innerHTML = "";
@@ -254,14 +245,18 @@ function createHitGrid() {
       saveState();
       document.querySelectorAll(".hit-cell").forEach(c => c.classList.remove("selected"));
       div.classList.add("selected");
-      applyHitFilter(i);
+
+      // 履歴に追加
+      history.push({ guess: guessValue, hit: i });
+
+      applyHitFilter();
     });
 
     grid.appendChild(div);
   }
 }
 
-// 位置一致数を計算
+// 一致数計算
 function countHit(a, b) {
   let h = 0;
   for (let i = 0; i < 4; i++) {
@@ -270,20 +265,19 @@ function countHit(a, b) {
   return h;
 }
 
-// 正解数フィルタリング
-function applyHitFilter(hit) {
-  if (!/^[12]{4}$/.test(guessValue)) return;
-
+// 累積フィルタ方式
+function applyHitFilter() {
   candidates = [...initialCandidates];
-  candidates = candidates.filter(code => countHit(code, guessValue) === hit);
+
+  history.forEach(h => {
+    candidates = candidates.filter(code => countHit(code, h.guess) === h.hit);
+  });
 
   updateResult();
 }
 
-// 結果表示（候補セル）
+// 結果表示
 function updateResult() {
-  candidates = candidates.filter(c => !historyGuesses.includes(c));
-
   const result = document.getElementById("result");
 
   if (candidates.length === 1) {
@@ -320,6 +314,7 @@ document.getElementById("resetBtn").onclick = () => {
   candidates = [...initialCandidates];
   guessValue = "";
   historyGuesses = [];
+  history = [];
   stateHistory = [];
 
   document.getElementById("guess").value = "";
@@ -332,7 +327,6 @@ document.getElementById("resetBtn").onclick = () => {
   updateResult();
 };
 
-// Undo ボタン
 document.getElementById("undoBtn").onclick = undo;
 
 // 初期化
@@ -347,7 +341,6 @@ updateResult();
   <a href="https://x.com/Kana_Bananan" target="_blank">ばな奈</a> /
   <a href="https://github.com/TheDeepBeyond/RaidCB" target="_blank">GitHub</a>
 </div>
-
 
 </body>
 </html>
