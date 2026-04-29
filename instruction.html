@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<title>蝕花の残影ギミック補助（指示モード）</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+  body {
+    font-family: sans-serif;
+    padding: 20px;
+    background: #eeeeee;
+  }
+
+  .cell {
+    border: 2px solid #444;
+    padding: 8px 12px;
+    border-radius: 6px;
+    background: #f5f5f5;
+    min-width: 70px;
+    text-align: center;
+    cursor: pointer;
+    white-space: nowrap;
+    font-size: 1.4em;
+    font-weight: bold;
+  }
+
+  #nextCode {
+    font-size: 2em;
+    font-weight: bold;
+    padding: 10px;
+    background: #fff;
+    border: 3px solid #444;
+    border-radius: 8px;
+    text-align: center;
+    margin-bottom: 20px;
+    transition: background 0.2s;
+  }
+
+  /* 確定時の緑表示 */
+  #nextCode.finished-code {
+    background: #88ee88;
+    border-color: #004400;
+  }
+
+  .hit-grid {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+  }
+
+  .hit-cell {
+    border: 2px solid #444;
+    padding: 12px 16px;
+    border-radius: 6px;
+    background: #fafafa;
+    min-width: 40px;
+    text-align: center;
+    cursor: pointer;
+    white-space: nowrap;
+    font-size: 1.4em;
+    font-weight: bold;
+  }
+
+  .hit-cell:hover {
+    background: #e0e0e0;
+  }
+
+  /* 破綻Hitを塗りつぶす */
+  .hit-cell.disabled-hit {
+    background: #552255;
+    color: #ffffff;
+    border-color: #000000;
+    pointer-events: none;
+    opacity: 0.7;
+  }
+
+  #log {
+    margin-top: 20px;
+    padding: 10px;
+    background: #fff;
+    border-radius: 6px;
+    border: 2px solid #444;
+    white-space: pre-wrap;
+  }
+
+  #resetBtn, #undoBtn {
+    padding: 12px 20px;
+    font-size: 1.2em;
+    font-weight: bold;
+    border: 3px solid #cc3300;
+    background: #ff9966;
+    color: #fff;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-right: 10px;
+  }
+
+  @media (max-width: 600px) {
+    .hit-cell {
+      min-width: 14vw !important;
+      padding: 8px 0;
+      font-size: 1.2em;
+    }
+    #nextCode {
+      font-size: 1.6em;
+    }
+  }
+</style>
+</head>
+<body>
+
+<button id="resetBtn">リセット</button>
+<button id="undoBtn">一つ戻る</button>
+<div class="cell" onclick="location.href='index.html'"
+     style="cursor:pointer; margin-bottom:20px; display:inline-block; background:#ddddee; ">
+  通常モードへ移行
+</div>
+<h3>入力するコード：</h3>
+<div id="nextCode">1111</div>
+
+<h3>正解数を選んでください：</h3>
+<div id="hitGrid" class="hit-grid"></div>
+
+<h3>ログ：</h3>
+<div id="log"></div>
+
+<script>
+// 全16候補
+const initialCandidates = [
+  "1111","1112","1121","1122",
+  "1211","1212","1221","1222",
+  "2111","2112","2121","2122",
+  "2211","2212","2221","2222"
+];
+
+let candidates = [...initialCandidates];
+let nextCode = "1111";
+let log = [];
+let stateHistory = [];
+let isFinished = false;   // 確定フラグ
+
+// 状態保存
+function saveState() {
+  stateHistory.push({
+    candidates: [...candidates],
+    nextCode,
+    log: [...log],
+    isFinished
+  });
+}
+
+// Undo
+function undo() {
+  if (stateHistory.length === 0) return;
+  const prev = stateHistory.pop();
+  candidates = [...prev.candidates];
+  nextCode = prev.nextCode;
+  log = [...prev.log];
+  isFinished = prev.isFinished;
+
+  const nc = document.getElementById("nextCode");
+  nc.classList.remove("finished-code");
+  if (isFinished) nc.classList.add("finished-code");
+
+  updateUI();
+}
+
+// Hit ボタン生成
+function createHitGrid() {
+  const grid = document.getElementById("hitGrid");
+  grid.innerHTML = "";
+
+  for (let i = 0; i <= 4; i++) {
+    const div = document.createElement("div");
+    div.className = "hit-cell";
+    div.textContent = i;
+    div.addEventListener("click", () => handleHit(i));
+    grid.appendChild(div);
+  }
+}
+
+// 一致数計算
+function countHit(a, b) {
+  let h = 0;
+  for (let i = 0; i < 4; i++) {
+    if (a[i] === b[i]) h++;
+  }
+  return h;
+}
+
+// 取りうるHit値を計算
+function computePossibleHits() {
+  const possible = new Set();
+  candidates.forEach(code => {
+    possible.add(countHit(code, nextCode));
+  });
+  return possible;
+}
+
+// Hitボタンの有効/無効を更新
+function updateHitButtons() {
+  const buttons = document.querySelectorAll(".hit-cell");
+
+  // 確定後は全部無効化
+  if (isFinished) {
+    buttons.forEach(btn => btn.classList.add("disabled-hit"));
+    return;
+  }
+
+  const possible = computePossibleHits();
+
+  buttons.forEach(btn => {
+    const v = Number(btn.textContent);
+    if (possible.has(v)) {
+      btn.classList.remove("disabled-hit");
+    } else {
+      btn.classList.add("disabled-hit");
+    }
+  });
+}
+
+// Hit 入力処理（累積フィルタ）
+function handleHit(hit) {
+  saveState();
+
+  log.push(`${nextCode} → 正解数 ${hit}`);
+
+  // Hit=4 → そのコードが答え
+  if (hit === 4) {
+    finish(nextCode);
+    return;
+  }
+
+  // 候補をフィルタ
+  candidates = candidates.filter(code => countHit(code, nextCode) === hit);
+
+  // 候補が1つなら確定
+  if (candidates.length === 1) {
+    finish(candidates[0]);
+    return;
+  }
+
+  // 次に押すコードを候補の先頭にする
+  nextCode = candidates[0];
+
+  updateUI();
+}
+
+// 確定
+function finish(answer) {
+  log.push(`答え：${answer}`);
+  nextCode = `確定：${answer}`;
+  isFinished = true;
+
+  document.getElementById("nextCode").classList.add("finished-code"); // 緑表示ON
+
+  updateUI();
+}
+
+// UI 更新
+function updateUI() {
+  document.getElementById("nextCode").textContent = nextCode;
+  document.getElementById("log").textContent = log.join("\n");
+  updateHitButtons();  // 破綻Hit塗りつぶし
+}
+
+// リセット
+document.getElementById("resetBtn").onclick = () => {
+  candidates = [...initialCandidates];
+  nextCode = "1111";
+  log = [];
+  stateHistory = [];
+  isFinished = false;
+
+  document.getElementById("nextCode").classList.remove("finished-code"); // 緑解除
+
+  updateUI();
+};
+
+document.getElementById("undoBtn").onclick = undo;
+
+// 初期化
+createHitGrid();
+updateUI();
+</script>
+
+<hr noshade size="1">
+<div align="right">
+  蝕花の残影ギミック補助:
+  <a href="https://x.com/Kana_Bananan" target="_blank">ばな奈</a> /
+  <a href="https://github.com/TheDeepBeyond/RaidCB" target="_blank">GitHub</a>
+</div>
+
+</body>
+</html>
