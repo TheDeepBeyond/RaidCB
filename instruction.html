@@ -48,7 +48,20 @@
     font-weight: bold;
   }
 
-  .hit-cell:hover {
+   .hit-cell {
+    border: 2px solid #444;
+    padding: 12px 16px;
+    border-radius: 6px;
+    background: #fafafa;
+    min-width: 40px;
+    text-align: center;
+    cursor: pointer;
+    white-space: nowrap;
+    font-size: 1.4em;
+    font-weight: bold;
+  }
+
+ .hit-cell:hover {
     background: #e0e0e0;
   }
 
@@ -98,6 +111,11 @@
 
 <button id="resetBtn">リセット</button>
 <button id="undoBtn">一つ戻る</button>
+
+<div class="link-cell" onclick="location.href='index.html'"
+     style="cursor:pointer; margin-bottom:20px; display:inline-block; ">
+  通常モードへ切り替え
+</div>
 
 <h3>入力するコード：</h3>
 <div id="nextCode">1111</div>
