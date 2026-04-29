@@ -41,6 +41,19 @@
     margin-top: 10px;
   }
 
+  .link-cell {
+    border: 2px solid #444;
+    padding: 8px 12px;
+    border-radius: 6px;
+    background: #ccccff;
+    min-width: 70px;
+    text-align: center;
+    cursor: pointer;
+    white-space: nowrap;
+    font-size: 0.8em;
+    font-weight: bold;
+   }
+
   .cell {
     border: 2px solid #444;
     padding: 8px 12px;
@@ -126,6 +139,11 @@
 
 <button id="resetBtn">リセット</button>
 <button id="undoBtn">一つ戻る</button>
+
+<div class="link-cell" onclick="location.href='instruction.html'"
+     style="cursor:pointer; margin-bottom:20px; display:inline-block; ">
+  指示モードへ切り替え
+</div>
 
 <h3>推測コードを選択：</h3>
 <div id="inputGrid" class="grid-input"></div>
