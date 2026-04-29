@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
-  body { font-family: sans-serif; padding: 20px; }
+  body { font-family: sans-serif; padding: 20px; background: #eeeeee; }
 
   #resetBtn, #undoBtn {
     padding: 12px 20px;
@@ -45,7 +45,7 @@
     border: 2px solid #444;
     padding: 8px 12px;
     border-radius: 6px;
-    background: #fafafa;
+    background: #f5f5f5;
     min-width: 70px;
     text-align: center;
     cursor: pointer;
@@ -53,8 +53,6 @@
     font-size: 1.4em;
     font-weight: bold;
   }
-
-  .cell:hover { background: #e6e6e6; }
 
   .cell.selected-guess {
     background: #ffe5cc;
@@ -64,6 +62,12 @@
   .cell.history-guess {
     background: #552255;
     border-color: #e6b800;
+  }
+
+  /* 破綻候補を塗りつぶす */
+  .cell.not-candidate {
+    background: #552255;
+    border-color: #000000;
   }
 
   .hit-grid {
@@ -173,7 +177,7 @@ function undo() {
   document.getElementById("guess").value = guessValue;
 
   document.querySelectorAll("#inputGrid .cell").forEach(c => {
-    c.classList.remove("selected-guess", "history-guess");
+    c.classList.remove("selected-guess", "history-guess", "not-candidate");
     if (c.textContent === guessValue) {
       c.classList.add("selected-guess");
     } else if (historyGuesses.includes(c.textContent)) {
@@ -246,7 +250,6 @@ function createHitGrid() {
       document.querySelectorAll(".hit-cell").forEach(c => c.classList.remove("selected"));
       div.classList.add("selected");
 
-      // 履歴に追加
       history.push({ guess: guessValue, hit: i });
 
       applyHitFilter();
@@ -276,6 +279,19 @@ function applyHitFilter() {
   updateResult();
 }
 
+// 候補外セルを塗りつぶす
+function updateCellColors() {
+  document.querySelectorAll("#inputGrid .cell").forEach(c => {
+    const code = c.textContent;
+
+    c.classList.remove("not-candidate");
+
+    if (!candidates.includes(code)) {
+      c.classList.add("not-candidate");
+    }
+  });
+}
+
 // 結果表示
 function updateResult() {
   const result = document.getElementById("result");
@@ -292,6 +308,8 @@ function updateResult() {
     div.textContent = c;
     div.addEventListener("click", () => selectCell(c));
     cg.appendChild(div);
+
+    updateCellColors();
     return;
   }
 
@@ -307,6 +325,8 @@ function updateResult() {
     div.addEventListener("click", () => selectCell(c));
     cg.appendChild(div);
   });
+
+  updateCellColors();
 }
 
 // リセット
@@ -320,8 +340,7 @@ document.getElementById("resetBtn").onclick = () => {
   document.getElementById("guess").value = "";
   document.querySelectorAll(".hit-cell").forEach(c => c.classList.remove("selected"));
   document.querySelectorAll("#inputGrid .cell").forEach(c => {
-    c.classList.remove("selected-guess");
-    c.classList.remove("history-guess");
+    c.classList.remove("selected-guess", "history-guess", "not-candidate");
   });
 
   updateResult();
