@@ -107,6 +107,13 @@
     border-color: #3399ff;
   }
 
+  .top-buttons {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 10px;
+  align-items: center;
+}
+
   /* スマホ最適化 */
   @media (max-width: 600px) {
 
@@ -137,12 +144,14 @@
 </head>
 <body>
 
-<button id="resetBtn">リセット</button>
-<button id="undoBtn">一つ戻る</button>
+<div class="top-buttons">
+  <button id="resetBtn">リセット</button>
+  <button id="undoBtn">一つ戻る</button>
 
-<div class="link-cell" onclick="location.href='instruction.html'"
-     style="cursor:pointer; margin-bottom:20px; display:inline-block; ">
-  指示モードへ<br>切り替え
+  <div class="link-cell" onclick="location.href='instruction.html'"
+       style="cursor:pointer; display:inline-block;">
+    指示モードへ<br>切り替え
+  </div>
 </div>
 
 <h3>推測コードを選択：</h3>
