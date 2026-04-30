@@ -74,7 +74,14 @@
     opacity: 0.7;
   }
 
-  #log {
+ .top-buttons {
+  display: flex;
+  flex-wrap: nowrap;   /* ← 折り返し禁止 */
+  gap: 10px;
+  align-items: center;
+}
+
+ #log {
     margin-top: 20px;
     padding: 10px;
     background: #fff;
@@ -109,14 +116,16 @@
 </head>
 <body>
 
-<button id="resetBtn">リセット</button>
-<button id="undoBtn">一つ戻る</button>
+<div class="top-buttons">
+  <button id="resetBtn">リセット</button>
+  <button id="undoBtn">一つ戻る</button>
 
-<div class="link-cell" onclick="location.href='index.html'"
-     style="cursor:pointer; margin-bottom:20px; display:inline-block; ">
-  通常モードへ<br>切り替え
+  <div class="link-cell" onclick="location.href='index.html'"
+       style="cursor:pointer; display:inline-block;">
+    通常モードへ<br>切り替え
+  </div>
 </div>
-
+  
 <h3>入力するコード：</h3>
 <div id="nextCode">1111</div>
 
